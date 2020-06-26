@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Gamedev Canvas Workshop</title>
+    <style>
+    	* { padding: 0; margin: 0; font-family: Helvetica Neue; }
+    	canvas { display: block; margin: 0 auto; border-radius: 10px; border: 2px solid white; }
+      body {
+        background: #34495e;
+        color: white;
+      }
+
+      h1, h6, h3, h4, p { color: #2c3e50; padding: 10px 0px; font-family: Menlo; }
+    </style>
+</head>
+<body>
+<h3 style="text-align: center; padding: 15px 0px;"><button id="mute-button" style="padding: 10px;">Mute Music</button></h3>
+<div style="position: relative; width: 720px; height: 550px; margin: 0 auto;">
+  <div id='splash-screen' style="position: absolute; width: 100%; height: 80%; z-index: 2; top: 0; left: 0; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+    <h1 style="font-size: 55px; color: #34495e; border-bottom: 1px solid #333;">Not My Cows!</h1>
+    <h6>A game by Jon Franco</h6>
+    <p style="width: 600px; text-align: center;">Outer space has unleashed its fury! Protect your live stock, your livelihood, your home. It's all you've got left...</p>
+    <div style="width: 250px; padding: 20px 0px;">
+      <p style="padding: 5px 0px; text-align: center;">• Move with A/D</p>
+      <p style="padding: 5px 0px; text-align: center;">• Aim with Left/Right</p>
+      <p style="padding: 5px 0px; text-align: center;">• Shoot with Up</p>
+    </div>
+    <h3 style="padding: 20px 0px; display: block;">Press Enter To Begin</h3>
+  </div>
+  <canvas style="position: absolute; z-index: 1" id="myCanvas" width="720" height="550" />
+</div>
+
+<img id="farm-bg" style="display: none;" src="assets/img/farm-bg.png" />
+<img id="cow" style="display: none;" src="assets/img/cow.png" />
+<img id="farm" style="display: none;" src="assets/img/farm.png" />
+<img id="farmer" style="display: none;" src="assets/img/farmer.png" />
+<img id="turretlayer" style="display: none;" src="assets/img/turretlayer.png" />
+<img id="lasershot" style="display: none;" src="assets/img/lasershot.png" />
+<img id="meteor" style="display: none;" src="assets/img/meteor.png" />
+<img id="fragment" style="display: none;" src="assets/img/fragment.png" />
+<img id="explosion" style="display: none;" src="assets/img/explosion.png" />
+
+<script>
+const canvas = document.getElementById('myCanvas')
+const ctx = canvas.getContext('2d')
+
+const farmBG = document.querySelector('#farm-bg')
+const cow = document.querySelector('#cow')
+const farmerSprite = document.querySelector('#farmer')
+const lasershot = document.querySelector('#lasershot')
+const meteor = document.querySelector('#meteor')
+const fragment = document.querySelector('#fragment')
+const explosion = document.querySelector('#explosion')
+
+const deploy = new Audio('assets/sfx/deploy.wav')
+const gun_sfx = new Audio('assets/sfx/machine-gun.wav')
+gun_sfx.volume = 1
+const yeehaw_sfx = new Audio('assets/sfx/yeehaw.wav')
+yeehaw_sfx.volume = .7
+const bluegrass_sfx = new Audio('assets/sfx/bluegrass.mp3')
+bluegrass_sfx.volume = .5
+const explosion_sfx = new Audio('assets/sfx/explosion.wav')
+const moo_sfx = new Audio('assets/sfx/moo-2.wav')
+
+const muteButton = document.querySelector('#mute-button')
+muteButton.addEventListener('click', () => {
+  if (bluegrass_sfx.volume === 0) {
+    bluegrass_sfx.volume = .5
+  } else {
+    bluegrass_sfx.volume = 0
+  }
+})
+let rightAimPressed = 0
+let leftAimPressed = 0
+let rightPressed = 0
+let leftPressed = 0
+let upPressed = 0
+let enterPressed = 0
+
+document.addEventListener('keydown', keyDownHandler, false)
+document.addEventListener('keyup', keyUpHandler, false)
+
+function keyDownHandler (e) {
+  if (e.key === 'Right' || e.key === 'ArrowRight') rightAimPressed = 1
+  if (e.key === 'Left' || e.key === 'ArrowLeft') leftAimPressed = 1
+  if (e.key === 'Up' || e.key === 'ArrowUp') upPressed = 1
+  if (e.key === 'd' || e.key === 'D') rightPressed = 1
+  if (e.key === 'a' || e.key === 'A') leftPressed = 1
+  if (e.key === 'Enter') enterPressed = 1
+}
+
+function keyUpHandler (e) {
+  if (e.key === 'Right' || e.key === 'ArrowRight') rightAimPressed = 0
+  if (e.key === 'Left' || e.key === 'ArrowLeft') leftAimPressed = 0
+  if (e.key === 'Up' || e.key === 'ArrowUp') upPressed = 0
+  if (e.key === 'd' || e.key === 'D') rightPressed = 0
+  if (e.key === 'a' || e.key === 'A') leftPressed = 0
+  if (e.key === 'Enter') enterPressed = 0
+}
+
+function getRandomInt (min, max) {
+  min = Math.ceil(min)
+  max = Math.floor(max)
+  return Math.floor(Math.random() * (max - min)) + min //The maximum is exclusive and the minimum is inclusive
+}
+
+// ----- Game ------ // 
+
+const GAME_WIDTH = canvas.width
+const GAME_HEIGHT = canvas.height
+
+const textures = [
+  '#000000',
+  '#8e44ad',
+  '#e67e22',
+  '#f1c40f', // yellow
+  '#7f8c8d' // dark gray
+]
+
+let farmer
+let house
+let crop
+let gun
+let cowsLeft = []
+let bullets = []
+let meteors = []
+let particles = []
+let METEORS_MAX = 5
+let PARTICLES_MAX = 100
+let BULLETS_MAX = 100
+
+function collision (a, b) {
+  const xcollide = (a.x + a.w) >= b.x && a.x < (b.x + b.w)
+  const ycollide = (a.y + a.h) >= b.y && a.y < (b.y + b.h)
+  return xcollide && ycollide
+}
+
+function drawRect (x, y, w, h, t, deg, img) {
+  if (t) ctx.fillStyle = textures[t]
+  if (deg) {
+    ctx.save()
+    ctx.translate((x + (w / 2)), y + h)
+    ctx.rotate(deg * Math.PI / 180)
+    ctx.translate(-(x + (w / 2)), -(y + h))
+  }
+
+  if (img) {
+    ctx.drawImage(img, x, y, w, h)
+  } else {
+    ctx.fillRect(x, y, w, h)
+  }
+
+  ctx.restore()
+}
+
+function updateFarmer () {
+  farmer.speed_x = (leftPressed || rightPressed) ? (leftPressed ? -5 : 5) : 0
+  farmer.x += farmer.speed_x
+}
+
+function updateGun () {
+  if (gun.can_fire > 0) gun.can_fire--
+
+  if (rightAimPressed) gun.deg += gun.deg < 90 ? 3 : 0
+  if (leftAimPressed) gun.deg -= gun.deg > -90 ? 3 : 0
+
+  gun.x = farmer.x + (farmer.w / 2) - (gun.w / 2)
+  gun.y = farmer.y - gun.h + 5
+}
+
+function fireBullet () {
+  if (gun.can_fire > 0) return
+
+  gun.can_fire = 5
+  let x_ratio = Math.sin(gun.deg * (Math.PI / 180))
+  let y_ratio = -Math.cos(gun.deg * (Math.PI / 180))
+  let x = gun.x + (gun.h * x_ratio)
+  let y = gun.y + (gun.h * y_ratio) + 30
+  if (farmer.speed_x * x_ratio < 0) farmer.speed_x = 0 // correct for away farmer movement's affect on bullet trajectory
+
+  for (let i = 0; i < BULLETS_MAX; i++) {
+    if (bullets[i].dur === 0) {
+      bullets[i].x = x
+      bullets[i].y = y
+      bullets[i].w = 10
+      bullets[i].h = 10
+      bullets[i].t = 1
+      bullets[i].x_ratio =  x_ratio
+      bullets[i].y_ratio =  y_ratio
+      bullets[i].speed_x = farmer.speed_x
+      bullets[i].dur = 70
+      break
+    }
+  }
+}
+
+function spawnExplosion (x_origin, y_origin, x_speed, y_speed, num_of_particles) {
+  for (let i = 0; i < num_of_particles; i++) {
+    for (let i = 0; i < PARTICLES_MAX; i++) {
+      if (particles[i] && particles[i].dur === 0) {
+        particles[i].x = x_origin
+        particles[i].y = y_origin
+        particles[i].x_speed = x_speed + getRandomInt(-3, 3)
+        particles[i].y_speed = y_speed + getRandomInt(-3, 3)
+        particles[i].dur = 200
+        break
+      }
+    }
+  }
+}
+
+function spawnMeteors (num_of) {
+  for (let i = 0; i < num_of; i++) {
+    const meteor_max_height = 40
+
+    // to make harder, incrememnt values of size, speed, and fall angle
+    const meteor_speed = 1
+    const meteor_scale = getRandomInt(25, meteor_max_height)
+    const meteor_fall_angle = getRandomInt(meteor_speed, 5)
+
+    const originX = getRandomInt(0, GAME_WIDTH)
+    const originY = getRandomInt((GAME_HEIGHT * -0.2), -meteor_max_height)
+    const dir = originX > (GAME_WIDTH / 2) ? -1 : 1
+
+    meteors[i].x = originX
+    meteors[i].y = originY
+    meteors[i].w = meteor_scale
+    meteors[i].h = meteor_scale
+    meteors[i].x_dir = meteor_speed * dir
+    meteors[i].y_dir = meteor_speed * meteor_fall_angle
+    meteors[i].t = 0
+    meteors[i].blown_up = 0
+  }
+}
+
+function initMeteors () {
+  for (let i = 0; i < METEORS_MAX; i++) meteors[i] = {}
+}
+
+function initBullets () {
+  for (let i = 0; i < BULLETS_MAX; i++) {
+    bullets[i] = {
+      x: 0, y: 0, w: 0, h: 0, t: 0, x_ratio: 0, y_ratio: 0, speed_x: 0, dur: 0
+    }
+  }
+}
+
+function initParticles () {
+  for (let i = 0; i < PARTICLES_MAX; i++) {
+    particles[i] = { x: 0, y: 0, w: 10, h: 10, x_speed: 0, y_speed: 0, dur: 0, t: 0 }
+  }
+}
+
+function updateBullets () {
+  for (let i = 0; i < bullets.length; i++) {
+    bullets[i].x_ratio *= 0.99
+    bullets[i].y_ratio *= 0.99
+    bullets[i].x += (bullets[i].x_ratio * 8.5) + bullets[i].speed_x
+    bullets[i].y += (bullets[i].y_ratio * 8.5)
+  }
+}
+
+function updateMeteors () {
+  for (let i = 0; i < meteors.length; i++) {
+    meteors[i].x_dir *= 1.003
+    meteors[i].y_dir *= 1.003
+    meteors[i].x += meteors[i].x_dir
+    meteors[i].y += meteors[i].y_dir
+  }
+}
+
+function drawEnemies () {
+  for (let i = 0; i < meteors.length; i++) {
+    if (meteors[i].blown_up === 0) {
+     //drawRect(meteors[i].x, meteors[i].y, meteors[i].w, meteors[i].h, meteors[i].t) 
+     ctx.drawImage(meteor, meteors[i].x - 5, meteors[i].y - 5, meteors[i].w + 10, meteors[i].h + 10)
+    }
+  }
+}
+
+function drawBullets () {
+  for (let i = 0; i < bullets.length; i++) {
+    if (bullets[i].dur > 0) {
+      ctx.drawImage(lasershot, bullets[i].x, bullets[i].y - bullets[i].h + 10, 18, 18)
+      //drawRect(bullets[i].x, bullets[i].y, bullets[i].w, bullets[i].h, bullets[i].t)
+      bullets[i].dur--
+    }
+  }
+}
+
+function drawParticles () {
+  for (let i = 0; i < particles.length; i++) {
+    if (particles[i].dur > 0) {
+      particles[i].x += particles[i].x_speed
+      particles[i].y += particles[i].y_speed
+
+      ctx.drawImage(fragment, particles[i].x, particles[i].y, particles[i].w, particles[i].h)
+      //drawRect(particles[i].x, particles[i].y, particles[i].w, particles[i].h, particles[i].t)
+      particles[i].dur--
+    }
+  }
+}
+
+function initCows () {
+  for (let i = 0; i < cowsLeft.length; i++) {
+    cowsLeft[i].x = getRandomInt(50, GAME_WIDTH)
+    cowsLeft[i].x_speed = getRandomInt(0, 2) === 0 ? 1 : -1
+    cowsLeft[i].switch_dur = getRandomInt(50, 300)
+  }
+}
+
+function updateCows () {
+  for (let i = 0; i < cowsLeft.length; i++) {
+    cowsLeft[i].x += cowsLeft[i].x_speed * 0.3
+    if (cowsLeft[i].switch_dur > 0) {
+      cowsLeft[i].switch_dur--
+    } else {
+      cowsLeft[i].x_speed *= -1
+      cowsLeft[i].switch_dur = getRandomInt(50, 300)
+      cowsLeft[i].dir = cowsLeft[i].x_speed > 0 ?  1 : 0
+    }
+  }
+}
+
+function drawCows () {
+  for (let i = 0; i < cowsLeft.length; i++) {
+    //  ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+    const spritesheet_offset = cowsLeft[i].x_speed > 0 ? 64 : 0
+    if (cowsLeft[i].dead === 0) ctx.drawImage(cow, spritesheet_offset, 0, 64, 64, cowsLeft[i].x - 25, cowsLeft[i].y - 45, 64, 64)
+    //drawRect(cowsLeft[i].x, cowsLeft[i].y, cowsLeft[i].w, cowsLeft[i].h, cowsLeft[i].t)
+  }
+}
+
+function checkCollisions () {
+  for (let a = 0; a < bullets.length; a++) {
+    for (let b = 0; b < meteors.length; b++) {
+      if (meteors[b].blown_up === 1) continue
+      if (collision(bullets[a], meteors[b])) {
+        explosion_sfx.pause()
+        explosion_sfx.currentTime = 0
+        explosion_sfx.play()
+        spawnExplosion(
+          meteors[b].x + (meteors[b].w / 2),
+          meteors[b].y + (meteors[b].h / 2),
+          bullets[a].x_ratio * 4,
+          bullets[a].y_ratio * 4,
+          10)
+        meteors[b].blown_up = 1
+      }
+    }
+  }
+
+  for (let c = 0; c < meteors.length; c++) {
+    //if (collision(house, meteors[c])) console.log('game over')
+    if (meteors[c].blown_up === 1) continue
+    for (let d = 0; d < cowsLeft.length; d++) {
+      if (collision(meteors[c], cowsLeft[d])) {
+        moo_sfx.pause()
+        moo_sfx.currentTime = 150
+        moo_sfx.play()
+
+        cowsLeft[d].dead = 1
+      }
+    }
+  }
+}
+
+
+
+function initGame () {
+  farmer = {
+    x: canvas.width / 2 - 10,
+    y: canvas.height - 30,
+    w: 20,
+    h: 30,
+    speed_x: 0,
+    speed_y: 0,
+    t: 0
+  }
+
+  house = {
+    x: canvas.width / 2 - 50,
+    y: canvas.height - 50,
+    w: 100,
+    h: 50,
+    t: 2
+  }
+
+  crop = {
+    x: canvas.width / 2 - 75,
+    y: canvas.height - 20,
+    w: 150,
+    h: 20,
+    t: 3
+  }
+
+  for (let i = 0; i < 7; i++) {
+    cowsLeft[i] = {
+      x: 0,
+      y: canvas.height - 20,
+      w: 30,
+      h: 20,
+      t: 4,
+      x_speed: 0,
+      y_speed: 0,
+      switch_dur: 0,
+      dead: 0
+    }
+  }
+
+  gun = { x: 0, y: 0, w: 1, h: 35, t: 0, deg: 20, can_fire: 0 }
+
+  initMeteors()
+  initParticles()
+  initBullets()
+  initCows()
+}
+
+function runGame (tracker) {
+  let numOf = 0
+  if (tracker >= 0 && tracker < 500) {
+    numOf = 10
+  } else {
+    numOf = 20
+  }
+
+  if (tracker % 400 === 0 || tracker === 5) spawnMeteors(numOf)
+
+  updateFarmer()
+  updateGun()
+  updateBullets()
+  updateMeteors()
+  checkCollisions()
+  updateCows()
+
+  drawEnemies()
+  drawParticles()
+  
+  // Farm/house
+  ctx.drawImage(farm, house.x, house.y - house.h + 10, 110, 90)
+  //drawRect(house.x, house.y, house.w, house.h, house.t)
+
+  drawCows()
+
+  drawBullets()
+  
+  //ctx.drawImage(, farmer.x - farmer.w, gun.y - gun.h, 75, 75)
+  drawRect(farmer.x - 30, farmer.y - 90 - gun.can_fire, 80, 80, gun.t, gun.deg, turretlayer)
+
+  //Farmer
+  ctx.drawImage(farmerSprite, farmer.x - farmer.w - 20, farmer.y - farmer.h - 30, 105, 90)
+  //drawRect(farmer.x, farmer.y, farmer.w, farmer.h, farmer.t)
+
+  drawStats()
+}
+
+let game_init = 0
+let tracker = 0
+let start_game = 0
+const splash = document.querySelector('#splash-screen')
+
+function toggleGameState (tracker) {
+  if (start_game && !game_init) {
+    splash.style.display = 'none'
+    initGame()
+    deploy.play()
+    yeehaw_sfx.play()
+    bluegrass_sfx.play()
+    game_init = 1
+  } else if (start_game && game_init) {
+    if (upPressed) {
+      gun_sfx.play()
+      fireBullet()
+    } else{
+      gun_sfx.volume = .2
+      gun_sfx.pause()
+      gun_sfx.currentTime = 0
+    }
+    runGame(tracker)
+  } else {
+    if (enterPressed && !game_init) {
+      startGame()
+      enterPressed = 0
+    } else {
+      splash.style.display = 'flex'
+      initGame()
+      ctx.drawImage(cow, 0, 0, 64, 64, GAME_WIDTH / 4, GAME_HEIGHT - 64, 64, 64)
+      ctx.drawImage(cow, 64, 0, 64, 64, GAME_WIDTH / 9, GAME_HEIGHT - 64, 64, 64)
+      ctx.drawImage(cow, 64, 0, 64, 64, GAME_WIDTH - 132, GAME_HEIGHT - 64, 64, 64)
+      ctx.drawImage(farm, house.x, house.y - house.h + 10, 110, 90)
+      ctx.drawImage(farmerSprite, farmer.x - farmer.w - 20, farmer.y - farmer.h - 30, 105, 90)
+    }
+  }
+}
+
+function startGame () {
+  tracker = 0
+  game_init = 0
+  start_game = 1
+}
+
+function stopGame () {
+  tracker = 0
+  game_init = 0
+  start_game = 0
+}
+
+function drawStats () {
+  let numOf = 0
+  for (let i = 0; i < cowsLeft.length; i++) {
+    if (cowsLeft[i].dead === 0) numOf++
+  }
+
+  if (numOf === 0) stopGame()
+
+  for (let i = 0; i < numOf; i++) ctx.drawImage(cow, 0, 0, 64, 64, 0 + 10, i + (i * 40) + 10, 32, 32)
+}
+
+function loop () {
+  window.requestAnimationFrame(loop)
+  tracker++
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+  ctx.drawImage(farmBG, 0, 0, 720, 550)
+
+  toggleGameState(tracker)
+}
+
+window.requestAnimationFrame(loop)
+</script>
+
+</body>
+</html>
