@@ -93,7 +93,7 @@ document.addEventListener('keyup', keyUpHandler, false)
 function keyDownHandler (e) {
   if (e.key === 'Right' || e.key === 'ArrowRight') rightAimPressed = 1
   if (e.key === 'Left' || e.key === 'ArrowLeft') leftAimPressed = 1
-  if (e.key === 'Up' || e.key === 'ArrowUp') upPressed = 1
+  if (e.key === 'Up' || e.key === 'ArrowUp' || e.code === 'Space') upPressed = 1
   if (e.key === 'd' || e.key === 'D') rightPressed = 1
   if (e.key === 'a' || e.key === 'A') leftPressed = 1
   if (e.key === 'Enter') enterPressed = 1
@@ -102,7 +102,7 @@ function keyDownHandler (e) {
 function keyUpHandler (e) {
   if (e.key === 'Right' || e.key === 'ArrowRight') rightAimPressed = 0
   if (e.key === 'Left' || e.key === 'ArrowLeft') leftAimPressed = 0
-  if (e.key === 'Up' || e.key === 'ArrowUp') upPressed = 0
+  if (e.key === 'Up' || e.key === 'ArrowUp' || e.code === 'Space') upPressed = 0
   if (e.key === 'd' || e.key === 'D') rightPressed = 0
   if (e.key === 'a' || e.key === 'A') leftPressed = 0
   if (e.key === 'Enter') enterPressed = 0
