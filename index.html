@@ -73,15 +73,13 @@ const meteor = document.querySelector('#meteor')
 const fragment = document.querySelector('#fragment')
 const explosion = document.querySelector('#explosion')
 
-const deploy = new Audio('assets/sfx/deploy.wav')
-const gun_sfx = new Audio('assets/sfx/machine-gun.wav')
-gun_sfx.volume = .5
-const yeehaw_sfx = new Audio('assets/sfx/yeehaw.wav')
-yeehaw_sfx.volume = 0
-const bluegrass_sfx = new Audio('assets/sfx/bluegrass.mp3')
-bluegrass_sfx.volume = .5
-const explosion_sfx = new Audio('assets/sfx/explosion.wav')
-const moo_sfx = new Audio('assets/sfx/moo-2.wav')
+let soundsLoaded = false
+let deploy
+let gun_sfx
+let yeehaw_sfx
+let bluegrass_sfx
+let explosion_sfx
+let moo_sfx
 
 const muteButton = document.querySelector('#mute-button')
 muteButton.addEventListener('click', () => {
@@ -513,6 +511,19 @@ function toggleGameState (tracker) {
 }
 
 function startGame () {
+  if (!soundsLoaded) {
+    deploy = new Audio('assets/sfx/deploy.mp3')
+    gun_sfx = new Audio('assets/sfx/machine-gun.mp3')
+    gun_sfx.volume = .5
+    yeehaw_sfx = new Audio('assets/sfx/yeehaw.wav')
+    yeehaw_sfx.volume = 0
+    bluegrass_sfx = new Audio('assets/sfx/bluegrass.mp3')
+    bluegrass_sfx.volume = .5
+    explosion_sfx = new Audio('assets/sfx/explosion.mp3')
+    moo_sfx = new Audio('assets/sfx/moo-2.wav')
+    soundsLoaded = true
+  }
+
   tracker = 0
   game_init = 0
   start_game = 1
