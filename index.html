@@ -14,7 +14,7 @@
         color: white;
       }
 
-      h1, h6, h3, h4, p, a { color: #2c3e50; padding: 10px 0px; font-family: Menlo; }
+      h1, h6, h3, h4, p, a, button { color: #2c3e50; padding: 10px 0px; font-family: Menlo; }
     </style>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-07BC377BXY"></script>
@@ -28,11 +28,13 @@
 </head>
 <body>
 <nav style="display: flex; align-items: center; gap: 20px; max-width: 720px; margin: 0 auto;">
-  <div style="margin-right: auto; display: flex; justify-content: center; align-items: center; gap: 10px;">
+  <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
     <img src="favicon.png" alt="cow" style="max-width: 30px;">
     <p style="color: white; font-size: 18px;">Not My Cows</p>
   </div>
-  
+  <div style="flex: 1; display: flex; justify-content: center;">
+    <button id="mute-button" style="padding: 10px 15px; border-radius: 8px; background: white; border: 0; font-size: 16px; cursor: pointer;">Mute Music</button>
+  </div>
   <a href="https://twitter.com/notmycowsgame" style="color: white; padding: 25px 0px; font-size: 18px; display: flex; justify-content: center; align-items: center; gap: 10px;" target="_blank">
     Follow
     <svg style="width: 100%; max-width: 24px; fill: white;" viewBox="0 0 24 24" aria-hidden="true"><g><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></g></svg>
@@ -44,9 +46,6 @@
     </svg>
   </a>
 </nav>
-<h3 style="text-align: center; padding: 15px 0px;">
-  <button id="mute-button" style="padding: 10px;">Mute Music</button>
-</h3>
 <div style="position: relative; width: 720px; height: 550px; margin: 0 auto;">
   <div id='splash-screen' style="position: absolute; width: 100%; height: 80%; z-index: 2; top: 0; left: 0; display: flex; flex-direction: column; justify-content: center; align-items: center;">
     <h1 style="font-size: 55px; color: #34495e; border-bottom: 1px solid #333;">Not My Cows!</h1>
