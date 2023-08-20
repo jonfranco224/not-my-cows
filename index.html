@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <title>Not My Cows</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta property="og:title" content="Not My Cows">
     <meta name="og:description" content="Outer space has unleashed its fury! Protect your live stock, your livelihood, your home. It's all you've got left...">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -65,13 +66,15 @@
 <img id="cow" style="display: none;" src="assets/img/cow.png" />
 <img id="farm" style="display: none;" src="assets/img/farm.png" />
 <img id="farmer" style="display: none;" src="assets/img/farmer.png" />
-<img id="turretlayer" style="display: none;" src="assets/img/turretlayer.png" />
+<img id="turretlayer" style="display: none;" src="assets/img/turretlayer-v2.png" />
 <img id="lasershot" style="display: none;" src="assets/img/lasershot.png" />
 <img id="meteor" style="display: none;" src="assets/img/meteor.png" />
 <img id="fragment" style="display: none;" src="assets/img/fragment.png" />
 <img id="explosion" style="display: none;" src="assets/img/explosion.png" />
 
 <script>
+const debugImage = true
+const debugRect = false
 const canvas = document.getElementById('myCanvas')
 const ctx = canvas.getContext('2d')
 
@@ -164,6 +167,17 @@ function collision (a, b) {
   return xcollide && ycollide
 }
 
+function degreesToRadians(degrees) {
+  return degrees * (Math.PI / 180)
+}
+
+function endpoint(cx, cy, r, theta) {
+  let x = cx + r * Math.cos(theta)
+  let y = cy + r * Math.sin(theta)
+  return {x, y}
+}
+
+
 function drawRect (x, y, w, h, t, deg, img) {
   if (t) ctx.fillStyle = textures[t]
   if (deg) {
@@ -194,28 +208,39 @@ function updateGun () {
   if (leftAimPressed) gun.deg -= gun.deg > -90 ? 3 : 0
 
   gun.x = farmer.x + (farmer.w / 2) - (gun.w / 2)
-  gun.y = farmer.y - gun.h + 5
+  gun.y = farmer.y - farmer.h - 70
 }
 
 function fireBullet () {
   if (gun.can_fire > 0) return
 
+  const bulletWidth = 10
+  const bulletHeight = 10
+
   gun.can_fire = 5
   let x_ratio = Math.sin(gun.deg * (Math.PI / 180))
   let y_ratio = -Math.cos(gun.deg * (Math.PI / 180))
-  let x = gun.x + (gun.h * x_ratio)
-  let y = gun.y + (gun.h * y_ratio) + 30
+  
+  // Target the x,y that is the distance of the gun away from the center firing point
+  const offsetIntoMuzzle = 20
+  const centerX = gun.x + (gun.w / 2) - (bulletWidth / 2)
+  const centerY = gun.y + gun.h - (bulletHeight / 2)
+  const rad = degreesToRadians(gun.deg - 90)
+  const target = endpoint(centerX, centerY, gun.h - offsetIntoMuzzle, rad)
+  let x = target.x
+  let y = target.y
+
   if (farmer.speed_x * x_ratio < 0) farmer.speed_x = 0 // correct for away farmer movement's affect on bullet trajectory
 
   for (let i = 0; i < BULLETS_MAX; i++) {
     if (bullets[i].dur === 0) {
+      bullets[i].w = bulletWidth
+      bullets[i].h = bulletHeight
       bullets[i].x = x
       bullets[i].y = y
-      bullets[i].w = 10
-      bullets[i].h = 10
       bullets[i].t = 1
-      bullets[i].x_ratio =  x_ratio
-      bullets[i].y_ratio =  y_ratio
+      bullets[i].x_ratio = x_ratio
+      bullets[i].y_ratio = y_ratio
       bullets[i].speed_x = farmer.speed_x
       bullets[i].dur = 70
       break
@@ -303,8 +328,8 @@ function updateMeteors () {
 function drawEnemies () {
   for (let i = 0; i < meteors.length; i++) {
     if (meteors[i].blown_up === 0) {
-     //drawRect(meteors[i].x, meteors[i].y, meteors[i].w, meteors[i].h, meteors[i].t) 
-     ctx.drawImage(meteor, meteors[i].x - 5, meteors[i].y - 5, meteors[i].w + 10, meteors[i].h + 10)
+      if (debugRect) drawRect(meteors[i].x, meteors[i].y, meteors[i].w, meteors[i].h, meteors[i].t) 
+      if (debugImage) ctx.drawImage(meteor, meteors[i].x - 5, meteors[i].y - 5, meteors[i].w + 10, meteors[i].h + 10)
     }
   }
 }
@@ -312,8 +337,8 @@ function drawEnemies () {
 function drawBullets () {
   for (let i = 0; i < bullets.length; i++) {
     if (bullets[i].dur > 0) {
-      ctx.drawImage(lasershot, bullets[i].x, bullets[i].y - bullets[i].h + 10, 18, 18)
-      //drawRect(bullets[i].x, bullets[i].y, bullets[i].w, bullets[i].h, bullets[i].t)
+      if (debugImage) ctx.drawImage(lasershot, bullets[i].x - 4, bullets[i].y - bullets[i].h + 6, 18, 18)
+      if (debugRect) drawRect(bullets[i].x, bullets[i].y, bullets[i].w, bullets[i].h, bullets[i].t)
       bullets[i].dur--
     }
   }
@@ -325,8 +350,8 @@ function drawParticles () {
       particles[i].x += particles[i].x_speed
       particles[i].y += particles[i].y_speed
 
-      ctx.drawImage(fragment, particles[i].x, particles[i].y, particles[i].w, particles[i].h)
-      //drawRect(particles[i].x, particles[i].y, particles[i].w, particles[i].h, particles[i].t)
+      if (debugImage) ctx.drawImage(fragment, particles[i].x, particles[i].y, particles[i].w, particles[i].h)
+      if (debugRect) drawRect(particles[i].x, particles[i].y, particles[i].w, particles[i].h, particles[i].t)
       particles[i].dur--
     }
   }
@@ -355,10 +380,10 @@ function updateCows () {
 
 function drawCows () {
   for (let i = 0; i < cowsLeft.length; i++) {
-    //  ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+    //if (debugImage) ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
     const spritesheet_offset = cowsLeft[i].x_speed > 0 ? 64 : 0
     if (cowsLeft[i].dead === 0) ctx.drawImage(cow, spritesheet_offset, 0, 64, 64, cowsLeft[i].x - 25, cowsLeft[i].y - 45, 64, 64)
-    //drawRect(cowsLeft[i].x, cowsLeft[i].y, cowsLeft[i].w, cowsLeft[i].h, cowsLeft[i].t)
+    //if (debugRect) drawRect(cowsLeft[i].x, cowsLeft[i].y, cowsLeft[i].w, cowsLeft[i].h, cowsLeft[i].t)
   }
 }
 
@@ -407,6 +432,16 @@ function initGame () {
     t: 0
   }
 
+  gun = {
+    x: canvas.width / 2 - 10,
+    y: canvas.height - 30,
+    w: 80,
+    h: 80,
+    t: 0,
+    deg: 0,
+    can_fire: 0
+  }
+
   house = {
     x: canvas.width / 2 - 50,
     y: canvas.height - 50,
@@ -437,8 +472,6 @@ function initGame () {
     }
   }
 
-  gun = { x: 0, y: 0, w: 1, h: 35, t: 0, deg: 20, can_fire: 0 }
-
   initMeteors()
   initParticles()
   initBullets()
@@ -466,21 +499,23 @@ function runGame (tracker) {
   drawParticles()
   
   // Farm/house
-  ctx.drawImage(farm, house.x, house.y - house.h + 10, 110, 90)
-  //drawRect(house.x, house.y, house.w, house.h, house.t)
+  if (debugImage) ctx.drawImage(farm, house.x, house.y - house.h + 10, 110, 90)
+  if (debugRect) drawRect(house.x, house.y, house.w, house.h, house.t)
 
   drawCows()
-
+  // if (debugImage) ctx.drawImage(farmer.x - farmer.w, gun.y - gun.h, 75, 75)
+  
   drawBullets()
   
-  //ctx.drawImage(, farmer.x - farmer.w, gun.y - gun.h, 75, 75)
-  drawRect(farmer.x - 30, farmer.y - 90 - gun.can_fire, 80, 80, gun.t, gun.deg, turretlayer)
-
-  //Farmer
-  ctx.drawImage(farmerSprite, farmer.x - farmer.w - 20, farmer.y - farmer.h - 30, 105, 90)
-  //drawRect(farmer.x, farmer.y, farmer.w, farmer.h, farmer.t)
+  // Gun
+  if (debugRect) drawRect(gun.x, gun.y - gun.can_fire, gun.w, gun.h, gun.t, gun.deg)
+  if (debugImage) drawRect(gun.x, gun.y - gun.can_fire, gun.w, gun.h, gun.t, gun.deg, turretlayer)
 
   drawStats()
+
+  //Farmer
+  if (debugImage) ctx.drawImage(farmerSprite, farmer.x - farmer.w - 20, farmer.y - farmer.h - 30, 105, 90)
+  if (debugRect) drawRect(farmer.x, farmer.y, farmer.w, farmer.h, farmer.t)
 }
 
 let game_init = 0
