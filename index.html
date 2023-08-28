@@ -20,7 +20,8 @@
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-07BC377BXY"></script>
     <script>
-      if (!window.origin.includes('localhost')) {
+      if (window.origin.includes('notmycows.com') || window.origin.includes('jonfranco224.github.io')) {
+        console.log('GTM Loaded')
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
