@@ -20,11 +20,13 @@
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-07BC377BXY"></script>
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-07BC377BXY');
+      if (window.origin.includes('notmycows.com') || window.origin.includes('jonfranco224.github.io')) {
+        console.log('GTM Loaded')
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-07BC377BXY');
+      }
     </script>
 </head>
 <body>
@@ -59,10 +61,10 @@
     </div>
     <h3 style="padding: 5px 0px; display: block;">- Press Enter To Begin - </h3>
   </div>
-  <canvas style="position: absolute; z-index: 1" id="myCanvas" width="720" height="550" />
+  <canvas style="position: absolute; z-index: 1; background: center / cover no-repeat url('/assets/img/farm-bg.png');" id="myCanvas" width="720" height="550" />
 </div>
 
-<img id="farm-bg" style="display: none;" src="assets/img/farm-bg.png" />
+<!-- <img id="farm-bg" style="display: none;" src="" /> -->
 <img id="cow" style="display: none;" src="assets/img/cow.png" />
 <img id="farm" style="display: none;" src="assets/img/farm.png" />
 <img id="farmer" style="display: none;" src="assets/img/farmer.png" />
@@ -113,21 +115,21 @@ document.addEventListener('keydown', keyDownHandler, false)
 document.addEventListener('keyup', keyUpHandler, false)
 
 function keyDownHandler (e) {
-  if (e.key === 'Right' || e.key === 'ArrowRight') rightAimPressed = 1
-  if (e.key === 'Left' || e.key === 'ArrowLeft') leftAimPressed = 1
-  if (e.key === 'Up' || e.key === 'ArrowUp' || e.code === 'Space') upPressed = 1
-  if (e.key === 'd' || e.key === 'D') rightPressed = 1
-  if (e.key === 'a' || e.key === 'A') leftPressed = 1
-  if (e.key === 'Enter') enterPressed = 1
+  if (e.code === 'ArrowRight') rightAimPressed = 1
+  if (e.code === 'ArrowLeft') leftAimPressed = 1
+  if (e.code === 'ArrowUp' || e.code === 'Space') upPressed = 1
+  if (e.code === 'KeyD') rightPressed = 1
+  if (e.code === 'KeyA') leftPressed = 1
+  if (e.code === 'Enter') enterPressed = 1
 }
 
 function keyUpHandler (e) {
-  if (e.key === 'Right' || e.key === 'ArrowRight') rightAimPressed = 0
-  if (e.key === 'Left' || e.key === 'ArrowLeft') leftAimPressed = 0
-  if (e.key === 'Up' || e.key === 'ArrowUp' || e.code === 'Space') upPressed = 0
-  if (e.key === 'd' || e.key === 'D') rightPressed = 0
-  if (e.key === 'a' || e.key === 'A') leftPressed = 0
-  if (e.key === 'Enter') enterPressed = 0
+  if (e.code === 'ArrowRight') rightAimPressed = 0
+  if (e.code === 'ArrowLeft') leftAimPressed = 0
+  if (e.code === 'ArrowUp' || e.code === 'Space') upPressed = 0
+  if (e.code === 'KeyD') rightPressed = 0
+  if (e.code === 'KeyA') leftPressed = 0
+  if (e.code === 'Enter') enterPressed = 0
 }
 
 function getRandomInt (min, max) {
@@ -598,18 +600,15 @@ let lastTimestamp = 0; // To track the timestamp of the last frame
 function loop(timestamp) {
   const deltaTime = timestamp - lastTimestamp // Calculate time elapsed since the last frame
   lastTimestamp = timestamp
-
-  if (deltaTime >= 1000 / 60) {
+  
+  if (deltaTime >= 16) {
     tracker++
-
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.drawImage(farmBG, 0, 0, 720, 550)
     toggleGameState(tracker)
   }
 
   window.requestAnimationFrame(loop)
 }
-
 window.requestAnimationFrame(loop)
 </script>
 </body>
