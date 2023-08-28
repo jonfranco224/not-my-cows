@@ -59,10 +59,10 @@
     </div>
     <h3 style="padding: 5px 0px; display: block;">- Press Enter To Begin - </h3>
   </div>
-  <canvas style="position: absolute; z-index: 1" id="myCanvas" width="720" height="550" />
+  <canvas style="position: absolute; z-index: 1; background: center / cover no-repeat url('/assets/img/farm-bg.png');" id="myCanvas" width="720" height="550" />
 </div>
 
-<img id="farm-bg" style="display: none;" src="assets/img/farm-bg.png" />
+<!-- <img id="farm-bg" style="display: none;" src="" /> -->
 <img id="cow" style="display: none;" src="assets/img/cow.png" />
 <img id="farm" style="display: none;" src="assets/img/farm.png" />
 <img id="farmer" style="display: none;" src="assets/img/farmer.png" />
@@ -598,22 +598,15 @@ let lastTimestamp = 0; // To track the timestamp of the last frame
 function loop(timestamp) {
   const deltaTime = timestamp - lastTimestamp // Calculate time elapsed since the last frame
   lastTimestamp = timestamp
-
-  if (deltaTime > 17) {
-    console.log(deltaTime)
-  }
   
-  if (deltaTime >= 1000 / 60) {
+  if (deltaTime >= 16) {
     tracker++
-
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.drawImage(farmBG, 0, 0, 720, 550)
     toggleGameState(tracker)
   }
 
   window.requestAnimationFrame(loop)
 }
-
 window.requestAnimationFrame(loop)
 </script>
 </body>
