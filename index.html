@@ -101,7 +101,7 @@
     </div>
     <h3 style="padding: 5px 0px; display: block; font-size: 16px;">-- Press Enter To Begin --</h3>
   </div>
-  <canvas style="position: absolute; z-index: 1; background: center / cover no-repeat url('/assets/img/farm-bg.png');" id="myCanvas" width="720" height="550" />
+  <canvas style="position: absolute; z-index: 1; background: center / cover no-repeat url('/assets/img/farm-bg.png'); image-rendering: pixelated;" id="myCanvas" width="720" height="550" />
 </div>
 
 <!-- <img id="farm-bg" style="display: none;" src="" /> -->
@@ -178,6 +178,92 @@ function getRandomInt (min, max) {
   return Math.floor(Math.random() * (max - min)) + min //The maximum is exclusive and the minimum is inclusive
 }
 
+// --UI -- //
+
+const drawText = (ctx, options) => {
+  const { text, x, y, fontSize, horizontalPadding, verticalPadding, hAlignment, vAlignment } = options;
+
+  ctx.font = `${fontSize}px Broken Console`;
+
+  // Calculate text dimensions
+  const textMetrics = ctx.measureText(text);
+  const buttonWidth = textMetrics.width + 2 * horizontalPadding;
+  const buttonHeight = textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent + 2 * verticalPadding;
+
+  // Adjust x based on hAlignment or specific value
+  let adjustedX;
+  if (typeof x !== 'undefined') {
+    adjustedX = x;
+  } else {
+    if (hAlignment === 'center') {
+      adjustedX = (ctx.canvas.width - buttonWidth) / 2;
+    } else if (hAlignment === 'right') {
+      adjustedX = ctx.canvas.width - buttonWidth;
+    } else { // Default to 'left'
+      adjustedX = 0;
+    }
+  }
+
+  // Adjust y based on vAlignment or specific value
+  let adjustedY;
+  if (typeof y !== 'undefined') {
+    adjustedY = y;
+  } else {
+    if (vAlignment === 'middle') {
+      adjustedY = (ctx.canvas.height - buttonHeight) / 2;
+    } else if (vAlignment === 'bottom') {
+      adjustedY = ctx.canvas.height - buttonHeight;
+    } else { // Default to 'top'
+      adjustedY = 0;
+    }
+  }
+
+  // Draw button background
+  ctx.fillStyle = 'transparent';
+  ctx.fillRect(adjustedX, adjustedY, buttonWidth, buttonHeight);
+
+  // Set up stroke properties
+  ctx.strokeStyle = 'black'; // set the stroke color
+  ctx.lineWidth = 0;         // set the stroke width
+
+  // Draw text
+  ctx.fillStyle = 'white';
+  ctx.fillText(
+    text,
+    adjustedX + horizontalPadding,
+    adjustedY + verticalPadding + textMetrics.actualBoundingBoxAscent
+  );
+
+  // Stroke the text
+  // ctx.strokeText(
+  //     text,
+  //     adjustedX + horizontalPadding,
+  //     adjustedY + verticalPadding + textMetrics.actualBoundingBoxAscent
+  // );
+
+  // Check if hAlignment is used and update startButton's x if it is
+  if (typeof x === 'undefined' && hAlignment) {
+    options.x = adjustedX; // Update the x value in startButton
+  }
+
+  // Check if vAlignment is used and update startButton's y if it is
+  if (typeof y === 'undefined' && vAlignment) {
+      options.y = adjustedY; // Update the y value in startButton
+  }
+
+  // Update width and height always
+  options.width = buttonWidth;
+  options.height = buttonHeight;
+
+  // Return button dimensions for click detection
+  return {
+    x: adjustedX,
+    y: adjustedY,
+    width: buttonWidth,
+    height: buttonHeight
+  };
+}
+
 // ----- Game ------ // 
 
 const GAME_WIDTH = canvas.width
@@ -191,6 +277,11 @@ const textures = [
   '#7f8c8d' // dark gray
 ]
 
+const COWS_MAX = 5
+const METEORS_MAX = 50
+const PARTICLES_MAX = 100
+const BULLETS_MAX = 100
+
 let farmer
 let house
 let crop
@@ -199,9 +290,7 @@ let cowsLeft = []
 let bullets = []
 let meteors = []
 let particles = []
-let METEORS_MAX = 5
-let PARTICLES_MAX = 100
-let BULLETS_MAX = 100
+let score = 0
 
 function collision (a, b) {
   const xcollide = (a.x + a.w) >= b.x && a.x < (b.x + b.w)
@@ -444,6 +533,7 @@ function checkCollisions () {
           bullets[a].y_ratio * 4,
           10)
         meteors[b].blown_up = 1
+        score += 10
       }
     }
   }
@@ -464,6 +554,8 @@ function checkCollisions () {
 }
 
 function initGame () {
+  score = 0
+
   farmer = {
     x: canvas.width / 2 - 10,
     y: canvas.height - 30,
@@ -500,7 +592,7 @@ function initGame () {
     t: 3
   }
 
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < COWS_MAX; i++) {
     cowsLeft[i] = {
       x: 0,
       y: canvas.height - 20,
@@ -560,43 +652,60 @@ function runGame (tracker) {
   if (debugRect) drawRect(farmer.x, farmer.y, farmer.w, farmer.h, farmer.t)
 }
 
-let game_init = 0
+let game_is_initialized = 0
 let tracker = 0
-let start_game = 0
+let game_is_active = 0
 const splash = document.querySelector('#splash-screen')
 
-function toggleGameState (tracker) {
-  if (start_game && !game_init) {
+function resetGunSound() {
+  gun_sfx.volume = .2;
+  gun_sfx.pause();
+  gun_sfx.currentTime = 0;
+}
+
+function displaySplash() {
+  splash.style.display = 'flex';
+  ctx.drawImage(cow, 0, 0, 64, 64, GAME_WIDTH / 4, GAME_HEIGHT - 64, 64, 64);
+  ctx.drawImage(cow, 64, 0, 64, 64, GAME_WIDTH / 9, GAME_HEIGHT - 64, 64, 64);
+  ctx.drawImage(cow, 64, 0, 64, 64, GAME_WIDTH - 132, GAME_HEIGHT - 64, 64, 64);
+  ctx.drawImage(farm, house.x, house.y - house.h + 10, 110, 90);
+  ctx.drawImage(farmerSprite, farmer.x - farmer.w - 20, farmer.y - farmer.h - 30, 105, 90);
+}
+
+function setGameState (tracker) {
+  if (game_is_active && !game_is_initialized) {
     splash.style.display = 'none'
     initGame()
-    //deploy.play()
     yeehaw_sfx.play()
-    bluegrass_sfx.play()
-    game_init = 1
-  } else if (start_game && game_init) {
+    // bluegrass_sfx.play()
+    game_is_initialized = 1
+    return
+  }
+
+  if (game_is_active && game_is_initialized) {
     if (upPressed) {
       gun_sfx.play()
       fireBullet()
-    } else{
-      gun_sfx.volume = .2
-      gun_sfx.pause()
-      gun_sfx.currentTime = 0
-    }
-    runGame(tracker)
-  } else {
-    if (enterPressed && !game_init) {
-      startGame()
-      enterPressed = 0
     } else {
-      splash.style.display = 'flex'
-      initGame()
-      ctx.drawImage(cow, 0, 0, 64, 64, GAME_WIDTH / 4, GAME_HEIGHT - 64, 64, 64)
-      ctx.drawImage(cow, 64, 0, 64, 64, GAME_WIDTH / 9, GAME_HEIGHT - 64, 64, 64)
-      ctx.drawImage(cow, 64, 0, 64, 64, GAME_WIDTH - 132, GAME_HEIGHT - 64, 64, 64)
-      ctx.drawImage(farm, house.x, house.y - house.h + 10, 110, 90)
-      ctx.drawImage(farmerSprite, farmer.x - farmer.w - 20, farmer.y - farmer.h - 30, 105, 90)
+      resetGunSound()
     }
+
+    runGame(tracker)
+    return
   }
+
+  // If enter is pressed and the game isn't initialized
+  if (enterPressed && !game_is_initialized) {
+    startGame()
+    enterPressed = 0
+    return
+  }
+
+  // Start Screen
+  initGame()
+  displaySplash()
+  // updateCows()
+  // drawCows()
 }
 
 function startGame () {
@@ -614,14 +723,14 @@ function startGame () {
   }
 
   tracker = 0
-  game_init = 0
-  start_game = 1
+  game_is_initialized = 0
+  game_is_active = 1
 }
 
 function stopGame () {
   tracker = 0
-  game_init = 0
-  start_game = 0
+  game_is_initialized = 0
+  game_is_active = 0
 }
 
 function drawStats () {
@@ -632,7 +741,18 @@ function drawStats () {
 
   if (numOf === 0) stopGame()
 
-  for (let i = 0; i < numOf; i++) ctx.drawImage(cow, 0, 0, 64, 64, 0 + 10, i + (i * 40) + 10, 32, 32)
+  for (let i = 0; i < numOf; i++) {
+    drawText(ctx, {
+      visible: true,
+      text: score,
+      fontSize: 26,
+      horizontalPadding: 20,
+      verticalPadding: 20,
+      hAlignment: 'right',
+      vAlignment: 'top'
+    })
+    ctx.drawImage(cow, 0, 0, 64, 64, i + (i * 40) + 15, 0 + 10 , 32, 32)
+  } 
 }
 
 let lastTimestamp = 0; // To track the timestamp of the last frame
@@ -644,7 +764,7 @@ function loop(timestamp) {
   if (deltaTime >= 16) {
     tracker++
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    toggleGameState(tracker)
+    setGameState(tracker)
   }
 
   window.requestAnimationFrame(loop)
